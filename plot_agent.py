@@ -74,6 +74,7 @@ class PlotAgent(object):
 
                 # Grid
                 'grid_on': True,
+                'grid_line_width': 0.5,
 
                 # Data
                 'datafile': [],  # each file stores the data of a curve
@@ -87,7 +88,7 @@ class PlotAgent(object):
         """
         self.ignore_symbols = ['#', '##']
         self.config_symbols = ['!']
-        self.space_symbol = '&' # Values in conf file containing & will be replaced by space
+        self.space_symbol = '~' # Values in conf file containing ~ will be replaced by space
 
     def get_config(self):
         return self.conf
@@ -290,7 +291,7 @@ class PlotCurveAgent(PlotAgent):
         self.set_legends(ax, conf, conf['legend'])
 
         if conf['grid_on']:
-            ax.grid()
+            ax.grid(linewidth=conf['grid_line_width'])
         ax.set_axisbelow(True) # Set grid below objects
 
     def set_ymin_ymax(self, y_min, y_max, conf):
@@ -525,6 +526,47 @@ class PlotBarAgent(PlotCurveAgent):
         """ put title, labels, etc """
         self.decorate_bar(ax, conf)
 
+    def plot_stacked_barchart(self, ax, data, conf):
+        """
+        ax: handler from plt.subplots()
+        data: 2D array, column number is the group number, row number is the bar number in each group
+        """
+        ngroups = data.shape[1]
+        nbars = data.shape[0]
+
+        conf['ngroups'] = ngroups  # Cached ngroups and nbars for later usage
+        conf['nbars'] = nbars
+
+        x_start = np.arange(1, ngroups + 1)  # x values of the first bar of all groups
+        conf['x_start'] = x_start
+
+        bottom = np.zeros(ngroups)  # reset start point (bottom value)
+
+        for i in range(nbars):
+            """ Plot each bar in all gruops """
+            y_vals = data[i][:]
+
+            x_vals = x_start + 0.5 * conf['bar_width']  # x values of the current bars
+
+            alpha = conf['opacity'][i] if len(conf['opacity']) > i else conf['opacity'][0]
+
+            # The bars with be plotted centered on the x values
+            # rects = ax.bar(x_vals, y_vals, conf['bar_width'], alpha=float(alpha), color=conf['color'][i])
+            rects = ax.bar(x_vals, y_vals, conf['bar_width'], alpha=float(alpha), bottom=bottom, color=conf['color'][i])
+            bottom += y_vals
+
+            if conf['put_text']:
+                # might need to tune this param if text overlapped with bar
+                vertical_dist = data.max() / 100
+                self.put_text(ax, x_vals, bottom, vertical_dist, conf=conf)
+
+        """ Set value range of the y-axis """
+        y_min, y_max = self.set_ymin_ymax(np.min(data), np.max(data), conf)
+        ax.set_ylim([y_min, y_max])
+
+        """ put title, labels, etc """
+        self.decorate_bar(ax, conf)
+
     def decorate_bar(self, ax, conf):
         """ Place title, xlabel, ylabel, xticklabel, yticklabel, grid, etc """
 
@@ -561,7 +603,7 @@ class PlotBarAgent(PlotCurveAgent):
                     fontsize=conf['legend_font'], ncol=int(conf['legend_ncol']), handletextpad=0.1)
 
         if conf['grid_on']:
-            ax.yaxis.grid()  # only show grid lines for yaxis
+            ax.yaxis.grid(linewidth=conf['grid_line_width'])  # only show grid lines for yaxis
 
     def put_text(self, ax, x_vals, y_vals, vertical_dist=0.5, conf={}):
         """ Put text on the barchart"""

@@ -33,7 +33,7 @@ def main(args):
         """ plot curves """
         plot_curves(args, save_name)
 
-    elif conf['plot_type'] == 'plotbar':
+    elif conf['plot_type'] in ['plotbar', 'plotstackedbar']:
         """ plot barchart """
         plot_barcharts(args, save_name)
     else:
@@ -103,7 +103,13 @@ def plot_barcharts(args, save_name):
     """ Configure figure layout"""
     fig, ax = plotBarAgent.config_layout(conf, tight=True)
 
-    plotBarAgent.plot_barchart(ax, data, conf)
+    if conf['plot_type'] == 'plotbar':
+        plotBarAgent.plot_barchart(ax, data, conf)
+    elif  conf['plot_type'] == 'plotstackedbar':
+        plotBarAgent.plot_stacked_barchart(ax, data, conf)
+    else:
+        raise Exception('Unknown plot type %s' % conf['plot_type'])
+
     plotBarAgent.save_fig(save_name)
 
 if __name__ == '__main__':
